@@ -34,17 +34,17 @@ class IPEDS
 
   CACHE_DIR = Rails.root.join('tmp', 'ipeds')
   # need to use a proxy to access the IPEDS database from a Amazon EC2 instances
-  BASE_URL = 'http://inviteeducation-proxy.appspot.com/?url=http://nces.ed.gov/ipeds/datacenter/data/'
+  BASE_URL = 'http://nces.ed.gov/ipeds/datacenter/data/'
   FILES = [
-    ['HD2015', :HD],
-    ['IC2015', :IC],
-    ['IC2015_AY', :IC_AY],
-    ['ADM2015', :ADM],
-    ['EFFY2015', :EFFY],
-    ['EF2015D', :EF_D],
-    ['GR2015', :GR],
-    ['C2015_A', :C_A],
-    ['SFA1415', :SFA]
+    ['HD2018', :HD],
+    ['IC2018', :IC],
+    ['IC2018_AY', :IC_AY],
+    ['ADM2018', :ADM],
+    ['EFFY2018', :EFFY],
+    ['EF2018D', :EF_D],
+    ['GR2018', :GR],
+    ['C2018_A', :C_A],
+    ['SFA1718_P1', :SFA]
   ]
   MAPPINGS = {
     HD: {
@@ -98,16 +98,12 @@ class IPEDS
       sat_reading_75: 'SATVR75',
       sat_math_25: 'SATMT25',
       sat_math_75: 'SATMT75',
-      sat_writing_25: 'SATWR25',
-      sat_writing_75: 'SATWR75',
       act_composite_25: 'ACTCM25',
       act_composite_75: 'ACTCM75',
       act_english_25: 'ACTEN25', # we currently don't use this
       act_english_75: 'ACTEN75', # we currently don't use this
       act_math_25: 'ACTMT25', # we currently don't use this
-      act_math_75: 'ACTMT75', # we currently don't use this
-      act_writing_25: 'ACTWR25', # we currently don't use this
-      act_writing_75: 'ACTWR75' # we currently don't use this
+      act_math_75: 'ACTMT75' # we currently don't use this
     },
     EFFY: {
       students_undergraduate: 'EFYTOTLT',
@@ -268,6 +264,7 @@ class IPEDS
           unzipped_file = File.join(CACHE_DIR, entry.name.gsub('_rv',''))
           File.delete(unzipped_file) if File.exists?(unzipped_file)
           zip.extract(entry, unzipped_file)
+          repair_file(entry, unzipped_file)
           puts "Unzipped #{entry.name}"
         end
       end
@@ -416,6 +413,17 @@ class IPEDS
       end
     end
     loaded
+  end
+
+  def repair_file(entry, path)
+    # fix a CSV::MalformedCSVError: Missing or stray quote in line with the hd2016.csv provisional file
+    if entry.name == "hd2016.csv"
+      # read file and fix stray quote, then write contents to the file
+      contents = File.read(path, encoding: 'iso-8859-1:UTF-8')
+      contents.gsub!('""Acting" Director"', '"Acting Director"')
+
+      File.open(path, 'w:iso-8859-1:UTF-8') { |f| f.write(contents) }
+    end
   end
 
 end
